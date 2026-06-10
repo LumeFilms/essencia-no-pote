@@ -44,8 +44,8 @@ export default function Recibo() {
           </div>
           <table>
             <tbody>
-              {order.items.map(i => (
-                <tr key={i.flavorId}><td>{i.qty}× {i.name}</td><td>{fmt(i.subtotal)}</td></tr>
+              {order.items.map((i, idx) => (
+                <tr key={i.flavor_id || i.id || idx}><td>{i.qty}× {i.name}</td><td>{fmt(i.subtotal)}</td></tr>
               ))}
               <tr className="rtotal"><td>Total</td><td>{fmt(order.total)}</td></tr>
             </tbody>

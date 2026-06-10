@@ -65,24 +65,36 @@ export async function POST() {
       `
     });
 
-    // Inserir configurações padrão
-    await supabase.from('config').upsert([
+    // Seed NÃO-destrutivo: só insere o que ainda não existe, para nunca
+    // sobrescrever a chave Pix, o PIN ou o estoque real de uma loja em produção.
+    const defaultConfig = [
       { key: 'pixKey', value: '31995076141' },
       { key: 'pixKeyType', value: 'telefone' },
       { key: 'merchantName', value: 'ESSENCIA NO POTE' },
       { key: 'merchantCity', value: 'BELO HORIZONTE' },
       { key: 'adminPin', value: '2108' },
       { key: 'whatsapp', value: '5531995076141' }
-    ], { onConflict: 'key' });
+    ];
+    const { data: existingConfig } = await supabase.from('config').select('key');
+    const existingKeys = new Set((existingConfig || []).map(c => c.key));
+    const missingConfig = defaultConfig.filter(c => !existingKeys.has(c.key));
+    if (missingConfig.length) {
+      await supabase.from('config').insert(missingConfig);
+    }
 
-    // Inserir sabores padrão
-    await supabase.from('flavors').upsert([
+    const defaultFlavors = [
       { id: 'f1', name: 'Coco', desc: 'Creme de coco fresco com massa macia', price: 12.00, stock: 20, active: true, emoji: '🥥' },
       { id: 'f2', name: 'Maracujá', desc: 'Creme de maracujá com cobertura especial', price: 12.00, stock: 15, active: true, emoji: '🟡' },
       { id: 'f3', name: 'Brigadeiro', desc: 'Brigadeiro cremoso com chocolate belga', price: 12.00, stock: 20, active: true, emoji: '🍫' },
       { id: 'f4', name: 'Ninho', desc: 'Creme de leite Ninho com massa fofinha', price: 12.00, stock: 18, active: true, emoji: '🍦' },
       { id: 'f5', name: 'Amendoim', desc: 'Creme de amendoim com cobertura crocante', price: 12.00, stock: 12, active: true, emoji: '🥜' }
-    ], { onConflict: 'id' });
+    ];
+    const { data: existingFlavors } = await supabase.from('flavors').select('id');
+    const existingIds = new Set((existingFlavors || []).map(f => f.id));
+    const missingFlavors = defaultFlavors.filter(f => !existingIds.has(f.id));
+    if (missingFlavors.length) {
+      await supabase.from('flavors').insert(missingFlavors);
+    }
 
     return Response.json({ success: true, message: 'Banco de dados configurado com sucesso!' });
   } catch (error) {
