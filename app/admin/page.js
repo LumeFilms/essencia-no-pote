@@ -120,7 +120,8 @@ export default function Admin() {
       <div className="awrap">
         {!logado && (
           <div className="loginbox">
-            <h2>Acesso restrito 🔒</h2>
+            <h2>Painel restrito</h2>
+            <p>Área exclusiva para gerenciar pedidos e estoque</p>
             <input type="password" placeholder="PIN" inputMode="numeric" value={pin}
               onChange={e => setPin(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && entrar()} />
@@ -140,15 +141,15 @@ export default function Admin() {
             )}
 
             <div className="tabs">
-              <button className={aba === 'pedidos' ? 'on' : ''} onClick={() => setAba('pedidos')}>📋 Pedidos</button>
-              <button className={aba === 'sabores' ? 'on' : ''} onClick={() => setAba('sabores')}>🍰 Sabores</button>
-              <button className={aba === 'qrcode' ? 'on' : ''} onClick={() => { setAba('qrcode'); gerarQRCode(); }}>📱 QR Code</button>
-              <button className={aba === 'ajustes' ? 'on' : ''} onClick={() => setAba('ajustes')}>⚙️ Ajustes</button>
+              <button type="button" className={aba === 'pedidos' ? 'on' : ''} onClick={() => setAba('pedidos')}>Pedidos</button>
+              <button type="button" className={aba === 'sabores' ? 'on' : ''} onClick={() => setAba('sabores')}>Sabores</button>
+              <button type="button" className={aba === 'qrcode' ? 'on' : ''} onClick={() => { setAba('qrcode'); gerarQRCode(); }}>QR Code</button>
+              <button type="button" className={aba === 'ajustes' ? 'on' : ''} onClick={() => setAba('ajustes')}>Ajustes</button>
             </div>
 
             {aba === 'pedidos' && (
               <div>
-                {orders.length === 0 && <div className="empty">Nenhum pedido ainda. 🍰</div>}
+                {orders.length === 0 && <div className="empty">Nenhum pedido ainda</div>}
                 {orders.map(o => (
                   <div className="item" key={o.id}>
                     <div className="head">

@@ -163,18 +163,33 @@ export default function Loja() {
     </div>
   );
 
+  const stepAtual = etapa === 'menu' ? 0 : etapa === 'checkout' ? 1 : 2;
+
+  const StepDots = () => (
+    <div className="step-dots">
+      <span className={'step-dot' + (stepAtual >= 0 ? ' done' : '')} />
+      <span className={'step-dot' + (stepAtual === 1 ? ' on' : stepAtual > 1 ? ' done' : '')} />
+      <span className={'step-dot' + (stepAtual === 2 ? ' on' : '')} />
+    </div>
+  );
+
   return (
     <div className="lojaBody">
       <header className="rotulo">
-        <img src="/logo.png" alt="Essência no Pote" className="logo-img" onClick={handleLogoTap} style={{cursor: 'pointer'}} />
-        <div className="tag">desde 2026</div>
-        <div className="motto script">Feito a mão com amor!</div>
+        <div className="hero-inner">
+          <img src="/logo.png" alt="Essência no Pote" className="logo-img" onClick={handleLogoTap} style={{cursor: 'pointer'}} />
+          <div className="tag">desde 2026</div>
+          <div className="motto script">Feito a mão com amor!</div>
+        </div>
       </header>
 
       <div className="wrap">
+        {etapa !== 'menu' && <StepDots />}
+
         {etapa === 'menu' && (
           <section>
             <h2 className="sec">Nossos sabores</h2>
+            <p className="sec-sub">Artesanais · Frescos · Feitos com carinho</p>
             {!flavors && <div className="spin" />}
             {flavors && flavors.length === 0 && (
               <div className="panel" style={{ textAlign: 'center' }}>
@@ -185,6 +200,7 @@ export default function Loja() {
               <div className={'card' + (f.stock === 0 ? ' sold-out' : '')} key={f.id}>
                 <div className="card-img">
                   <img src="/foto-do-produto.png" alt={f.name} />
+                  {f.emoji && <span className="card-emoji">{f.emoji}</span>}
                   {f.stock === 0 && <div className="sold-out-badge">Esgotado</div>}
                 </div>
                 <div className="info">
@@ -206,7 +222,10 @@ export default function Loja() {
         {etapa === 'checkout' && (
           <section>
             <div className="panel">
-              <h3>Quase lá! 🧁</h3>
+              <div className="panel-head">
+                <h3>Quase lá!</h3>
+                <p>Confirme seu pedido e finalize o pagamento</p>
+              </div>
               <Resumo />
               <label htmlFor="nome">Seu nome</label>
               <input type="text" id="nome" placeholder="Como podemos te chamar?" maxLength={60}
@@ -229,7 +248,10 @@ export default function Loja() {
         {etapa === 'pix' && pedido && (
           <section>
             <div className="panel">
-              <h3>Pague com Pix</h3>
+              <div className="panel-head">
+                <h3>Pague com Pix</h3>
+                <p>Escaneie o QR Code ou copie o código abaixo</p>
+              </div>
               <div style={{ textAlign: 'center' }}><span className="badge">Total: {fmt(pedido.total)}</span></div>
               <div className="qrbox">{qrUrl && <img src={qrUrl} alt="QR Code Pix" width={240} height={240} />}</div>
               <div className="copy">
@@ -288,7 +310,7 @@ export default function Loja() {
           <div className="tot">{qtd} {qtd === 1 ? 'item' : 'itens'}</div>
           <div className="val">{fmt(val)}</div>
         </div>
-        <button onClick={() => setEtapa('checkout')}>Continuar →</button>
+        <button type="button" onClick={() => setEtapa('checkout')}>Continuar →</button>
       </div>
     </div>
   );
