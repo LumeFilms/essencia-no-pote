@@ -64,6 +64,15 @@ export default function Admin() {
     await fetch(`/api/admin/orders/${id}/status`, { method: 'POST', headers: H(), body: JSON.stringify({ status }) });
     carregarTudo();
   }
+  async function excluirPedido(id, status) {
+    const aviso = status === 'pago'
+      ? `Excluir pedido #${id}? O estoque será devolvido. Esta ação não pode ser desfeita.`
+      : `Excluir pedido #${id} permanentemente? Esta ação não pode ser desfeita.`;
+    if (!confirm(aviso)) return;
+    const r = await fetch(`/api/admin/orders/${id}`, { method: 'DELETE', headers: H() });
+    if (!r.ok) { alert('Erro ao excluir pedido'); return; }
+    carregarTudo();
+  }
   async function editarSabor(id, body) {
     await fetch('/api/admin/flavors/' + id, { method: 'PUT', headers: H(), body: JSON.stringify(body) });
     carregarTudo();
@@ -170,7 +179,8 @@ export default function Admin() {
                           <button className="abtn sm ok" onClick={() => mudarStatus(o.id, 'pago')}>Confirmar pgto ✓</button>}
                         {o.status !== 'cancelado' &&
                           <button className="abtn sm no" onClick={() => confirm(`Cancelar pedido #${o.id}? O estoque será devolvido.`) && mudarStatus(o.id, 'cancelado')}>Cancelar</button>}
-                        <button className="abtn sm dark" onClick={() => window.open('/recibo/' + o.id, '_blank')}>Recibo 🧾</button>
+                        <button type="button" className="abtn sm dark" onClick={() => window.open('/recibo/' + o.id, '_blank')}>Recibo 🧾</button>
+                        <button type="button" className="abtn sm del" onClick={() => excluirPedido(o.id, o.status)}>Excluir</button>
                       </div>
                     </div>
                   </div>

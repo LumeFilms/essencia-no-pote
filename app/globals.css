@@ -398,6 +398,10 @@ footer.loja .script{font-size:1.2rem; color:var(--pink); display:block; margin-b
 .abtn.dark{background:var(--brown-mid); color:var(--cream); box-shadow:var(--shadow-sm)}
 .abtn.ok{background:linear-gradient(145deg, #6BBF8A, #4A9B6A); color:#fff}
 .abtn.no{background:linear-gradient(145deg, #E8A0A0, #D07070); color:#fff}
+.abtn.del{background:transparent; color:var(--brown-soft); border:1.5px solid rgba(44,24,16,.15); box-shadow:none}
+.abtn.del:hover{color:#991B1B; border-color:#FCA5A5; background:#FEF2F2}
+.adminBody .abtn.del{color:rgba(255,255,255,.45); border-color:rgba(255,255,255,.15)}
+.adminBody .abtn.del:hover{color:#FCA5A5; border-color:rgba(252,165,165,.4); background:rgba(254,242,242,.08)}
 .stats{
   display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
   gap:14px; margin:24px 0 28px;
