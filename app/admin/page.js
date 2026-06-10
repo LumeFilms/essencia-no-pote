@@ -19,19 +19,23 @@ export default function Admin() {
   const [flavors, setFlavors] = useState([]);
   const [novo, setNovo] = useState({ name: '', desc: '', price: '', stock: '', emoji: '' });
   const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [ajustes, setAjustes] = useState(null);
+  const [salvandoAjustes, setSalvandoAjustes] = useState(false);
 
   const H = useCallback(() => ({ 'Content-Type': 'application/json', 'x-pin': pin }), [pin]);
 
   const carregarTudo = useCallback(async (p) => {
     const h = { 'Content-Type': 'application/json', 'x-pin': p || pin };
-    const [rs, ro, rf] = await Promise.all([
+    const [rs, ro, rf, rc] = await Promise.all([
       fetch('/api/admin/resumo', { headers: h }),
       fetch('/api/admin/orders', { headers: h }),
-      fetch('/api/admin/flavors', { headers: h })
+      fetch('/api/admin/flavors', { headers: h }),
+      fetch('/api/admin/config', { headers: h })
     ]);
     if (rs.ok) setStats(await rs.json());
     if (ro.ok) setOrders(await ro.json());
     if (rf.ok) setFlavors(await rf.json());
+    if (rc.ok) setAjustes(await rc.json());
   }, [pin]);
 
   useEffect(() => {
@@ -82,6 +86,24 @@ export default function Admin() {
     setQrCodeUrl(qr);
   }
 
+  async function salvarAjustes() {
+    setSalvandoAjustes(true);
+    const r = await fetch('/api/admin/config', {
+      method: 'POST', headers: H(),
+      body: JSON.stringify({
+        infinitePayHandle: ajustes?.infinitePayHandle || '',
+        whatsapp: ajustes?.whatsapp || ''
+      })
+    });
+    if (r.ok) {
+      setAjustes(await r.json());
+      alert('Ajustes salvos! ✅');
+    } else {
+      alert('Erro ao salvar ajustes');
+    }
+    setSalvandoAjustes(false);
+  }
+
   return (
     <div className="adminBody">
       <header>
@@ -116,6 +138,7 @@ export default function Admin() {
               <button className={aba === 'pedidos' ? 'on' : ''} onClick={() => setAba('pedidos')}>📋 Pedidos</button>
               <button className={aba === 'sabores' ? 'on' : ''} onClick={() => setAba('sabores')}>🍰 Sabores</button>
               <button className={aba === 'qrcode' ? 'on' : ''} onClick={() => { setAba('qrcode'); gerarQRCode(); }}>📱 QR Code</button>
+              <button className={aba === 'ajustes' ? 'on' : ''} onClick={() => setAba('ajustes')}>⚙️ Ajustes</button>
             </div>
 
             {aba === 'pedidos' && (
@@ -233,6 +256,33 @@ export default function Admin() {
                 ) : (
                   <div className="spin" />
                 )}
+              </div>
+            )}
+
+            {aba === 'ajustes' && (
+              <div className="item">
+                <h3 style={{ marginBottom: 10 }}>Pagamento (InfinitePay)</h3>
+                <p className="sub2" style={{ marginBottom: 14 }}>
+                  Informe seu InfiniteTag (handle) — é o nome de usuário do app InfinitePay, sem o
+                  &quot;$&quot;. Ele é usado para gerar os links de pagamento da loja.
+                </p>
+                <label>InfiniteTag (handle)</label>
+                <input type="text" placeholder="ex: essencianopote"
+                  value={ajustes?.infinitePayHandle || ''}
+                  disabled={ajustes?.infinitePayHandleFromEnv}
+                  onChange={e => setAjustes({ ...ajustes, infinitePayHandle: e.target.value })} />
+                {ajustes?.infinitePayHandleFromEnv && (
+                  <p className="sub2" style={{ marginTop: 6 }}>
+                    Definido pela variável de ambiente INFINITEPAY_HANDLE (tem prioridade sobre este campo).
+                  </p>
+                )}
+                <label style={{ marginTop: 12 }}>WhatsApp (contato)</label>
+                <input type="text" placeholder="5531999999999"
+                  value={ajustes?.whatsapp || ''}
+                  onChange={e => setAjustes({ ...ajustes, whatsapp: e.target.value })} />
+                <button className="abtn" style={{ marginTop: 14 }} onClick={salvarAjustes} disabled={salvandoAjustes}>
+                  {salvandoAjustes ? 'Salvando...' : 'Salvar ajustes'}
+                </button>
               </div>
             )}
           </>

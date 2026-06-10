@@ -1,6 +1,16 @@
-import { getConfig, getFlavorById, createOrder, buildPixPayload } from '@/lib/db-supabase';
+import { getConfig, getFlavorById, createOrder } from '@/lib/db-supabase';
+import { createCheckoutLink, getHandle } from '@/lib/infinitepay';
 
 export const dynamic = 'force-dynamic';
+
+function getOrigin(req) {
+  const fromOrigin = req.headers.get('origin');
+  if (fromOrigin) return fromOrigin;
+  const host = req.headers.get('host');
+  const proto = req.headers.get('x-forwarded-proto') || 'https';
+  if (host) return `${proto}://${host}`;
+  return new URL(req.url).origin;
+}
 
 export async function POST(req) {
   try {
@@ -11,6 +21,14 @@ export async function POST(req) {
     }
 
     const config = await getConfig();
+    const handle = getHandle(config);
+    if (!handle) {
+      return Response.json(
+        { error: 'Pagamento online ainda não está configurado. Tente novamente em breve.' },
+        { status: 503 }
+      );
+    }
+
     const orderItems = [];
 
     for (const it of items) {
@@ -38,6 +56,7 @@ export async function POST(req) {
 
     const total = +orderItems.reduce((s, i) => s + i.subtotal, 0).toFixed(2);
 
+    // Cria o pedido aguardando pagamento. O estoque NÃO é descontado agora.
     const order = await createOrder({
       customerName: String(customerName).substring(0, 60),
       customerPhone: String(customerPhone || '').substring(0, 20),
@@ -45,16 +64,33 @@ export async function POST(req) {
       total
     });
 
-    const pixPayload = buildPixPayload({
-      key: config.pixKey,
-      name: config.merchantName,
-      city: config.merchantCity,
-      amount: total,
-      txid: order.txid,
-      keyType: config.pixKeyType
-    });
+    // Monta os itens para a InfinitePay (preço em centavos).
+    const ipItems = orderItems.map(i => ({
+      description: i.name,
+      price: Math.round(i.price * 100),
+      quantity: i.qty
+    }));
 
-    return Response.json({ order, pixPayload, pixKey: config.pixKey });
+    const origin = getOrigin(req);
+
+    let checkoutUrl;
+    try {
+      const link = await createCheckoutLink({
+        handle,
+        items: ipItems,
+        orderNsu: order.id,
+        redirectUrl: `${origin}/pagamento`,
+        webhookUrl: `${origin}/api/webhooks/infinitepay`,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone
+      });
+      checkoutUrl = link.url;
+    } catch (err) {
+      console.error('Erro ao criar link InfinitePay:', err);
+      return Response.json({ error: 'Não foi possível iniciar o pagamento. Tente novamente.' }, { status: 502 });
+    }
+
+    return Response.json({ order, checkoutUrl });
   } catch (error) {
     console.error('Error creating order:', error);
     return Response.json({ error: 'Erro ao criar pedido' }, { status: 500 });

@@ -73,7 +73,8 @@ export async function POST() {
       { key: 'merchantName', value: 'ESSENCIA NO POTE' },
       { key: 'merchantCity', value: 'BELO HORIZONTE' },
       { key: 'adminPin', value: '2108' },
-      { key: 'whatsapp', value: '5531995076141' }
+      { key: 'whatsapp', value: '5531995076141' },
+      { key: 'infinitePayHandle', value: '' }
     ];
     const { data: existingConfig } = await supabase.from('config').select('key');
     const existingKeys = new Set((existingConfig || []).map(c => c.key));

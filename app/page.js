@@ -1,22 +1,17 @@
 'use client';
 import { useState, useEffect } from 'react';
-import QRCode from 'qrcode';
 
-const fmt = v => 'R$ ' + v.toFixed(2).replace('.', ',');
+const fmt = v => 'R$ ' + Number(v).toFixed(2).replace('.', ',');
 
 export default function Loja() {
   const [flavors, setFlavors] = useState(null);
   const [cart, setCart] = useState({});
-  const [etapa, setEtapa] = useState('menu'); // menu | checkout | pix | sucesso
+  const [etapa, setEtapa] = useState('menu'); // menu | checkout
   const [nome, setNome] = useState('');
   const [fone, setFone] = useState('');
-  const [pedido, setPedido] = useState(null);
-  const [pixPayload, setPixPayload] = useState('');
-  const [qrUrl, setQrUrl] = useState('');
-  const [copiado, setCopiado] = useState(false);
+  const [pagando, setPagando] = useState(false);
   const [tapCount, setTapCount] = useState(0);
   const [tapTimer, setTapTimer] = useState(null);
-  const [polling, setPolling] = useState(null);
 
   function handleLogoTap() {
     const newCount = tapCount + 1;
@@ -35,27 +30,6 @@ export default function Loja() {
   useEffect(() => {
     fetch('/api/flavors').then(r => r.json()).then(setFlavors);
   }, []);
-
-  // Polling para verificar confirmação de pagamento
-  useEffect(() => {
-    if (etapa !== 'pix' || !pedido) return;
-
-    const interval = setInterval(async () => {
-      try {
-        const r = await fetch(`/api/orders/${pedido.id}`);
-        const data = await r.json();
-        if (data.order && data.order.status === 'pago') {
-          setEtapa('sucesso');
-          clearInterval(interval);
-        }
-      } catch (err) {
-        console.error('Erro ao verificar pagamento:', err);
-      }
-    }, 5000); // Verifica a cada 5 segundos
-
-    setPolling(interval);
-    return () => clearInterval(interval);
-  }, [etapa, pedido]);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [etapa]);
 
@@ -76,25 +50,25 @@ export default function Loja() {
 
   async function criarPedido() {
     if (!nome.trim()) { alert('Conta pra gente seu nome! 😊'); return; }
+    setPagando(true);
     const items = Object.entries(cart).map(([flavorId, q]) => ({ flavorId, qty: q }));
-    const r = await fetch('/api/orders', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customerName: nome.trim(), customerPhone: fone.trim(), items })
-    });
-    const data = await r.json();
-    if (!r.ok) { alert(data.error || 'Erro ao criar pedido'); return; }
-    setPedido(data.order);
-    setPixPayload(data.pixPayload);
-    setQrUrl(await QRCode.toDataURL(data.pixPayload, {
-      width: 240, margin: 1, color: { dark: '#3D2010', light: '#ffffff' }
-    }));
-    setEtapa('pix');
-  }
-
-  function copiarPix() {
-    navigator.clipboard.writeText(pixPayload).then(() => {
-      setCopiado(true); setTimeout(() => setCopiado(false), 2000);
-    });
+    try {
+      const r = await fetch('/api/orders', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerName: nome.trim(), customerPhone: fone.trim(), items })
+      });
+      const data = await r.json();
+      if (!r.ok || !data.checkoutUrl) {
+        alert(data.error || 'Erro ao iniciar o pagamento');
+        setPagando(false);
+        return;
+      }
+      // Redireciona para o checkout da InfinitePay (Pix ou cartão).
+      window.location.href = data.checkoutUrl;
+    } catch {
+      alert('Erro ao iniciar o pagamento. Tente novamente.');
+      setPagando(false);
+    }
   }
 
   const Resumo = () => (
@@ -157,67 +131,10 @@ export default function Loja() {
               <label htmlFor="fone">WhatsApp (opcional)</label>
               <input type="tel" id="fone" placeholder="(31) 9 9999-9999" maxLength={20}
                 value={fone} onChange={e => setFone(e.target.value)} />
-              <button className="btn" onClick={criarPedido}>Pagar com Pix 💚</button>
-              <button className="btn ghost" onClick={() => setEtapa('menu')}>← Voltar aos sabores</button>
-            </div>
-          </section>
-        )}
-
-        {etapa === 'pix' && pedido && (
-          <section>
-            <div className="panel">
-              <h3>Pague com Pix</h3>
-              <div style={{ textAlign: 'center' }}><span className="badge">Total: {fmt(pedido.total)}</span></div>
-              <div className="qrbox">{qrUrl && <img src={qrUrl} alt="QR Code Pix" width={240} height={240} />}</div>
-              <div className="copy">
-                <input type="text" readOnly value={pixPayload} />
-                <button onClick={copiarPix}>{copiado ? 'Copiado!' : 'Copiar'}</button>
-              </div>
-              <div className="steps">
-                <b>1.</b> Abra o app do seu banco<br />
-                <b>2.</b> Escaneie o QR Code ou use o <b>Pix copia e cola</b><br />
-                <b>3.</b> Confirme o pagamento no banco
-              </div>
-              <div className="pix-aviso">
-                <div className="pix-aviso-icon">⏳</div>
-                <p><strong>Aguardando pagamento...</strong></p>
-                <p>Após pagar, aguarde a confirmação automática. Esta página será atualizada quando o pagamento for confirmado.</p>
-              </div>
-              <div className="pedido-info">
-                <span className="badge">Pedido #{pedido.id}</span>
-              </div>
-              <button className="btn ghost" onClick={() => {
-                if (polling) clearInterval(polling);
-                setEtapa('menu');
-                setPedido(null);
-                setPixPayload('');
-                setQrUrl('');
-                setCart({});
-              }}>← Voltar à loja</button>
-            </div>
-          </section>
-        )}
-
-        {etapa === 'sucesso' && pedido && (
-          <section>
-            <div className="panel done">
-              <div className="big">✅</div>
-              <h3>Pagamento confirmado!</h3>
-              <span className="badge">Pedido #{pedido.id}</span>
-              <p style={{ fontSize: '.92rem', color: 'var(--brown-soft)', margin: '8px 0 4px' }}>
-                Seu pagamento foi confirmado! Estamos preparando seu bolo no pote com muito carinho. 💕
-              </p>
-              <Resumo />
-              <button className="btn" onClick={() => window.open('/recibo/' + pedido.id, '_blank')}>Ver recibo 🧾</button>
-              <button className="btn ghost" onClick={() => {
-                setEtapa('menu');
-                setPedido(null);
-                setPixPayload('');
-                setQrUrl('');
-                setCart({});
-                setNome('');
-                setFone('');
-              }}>Fazer novo pedido</button>
+              <button className="btn" onClick={criarPedido} disabled={pagando}>
+                {pagando ? 'Indo para o pagamento...' : 'Pagar com Pix ou cartão 💳'}
+              </button>
+              <button className="btn ghost" onClick={() => setEtapa('menu')} disabled={pagando}>← Voltar aos sabores</button>
             </div>
           </section>
         )}
