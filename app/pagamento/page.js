@@ -34,6 +34,13 @@ function PagamentoInner() {
 
   useEffect(() => { confirmar(); }, [confirmar]);
 
+  // Verifica automaticamente a cada 4s enquanto o pagamento estiver pendente.
+  useEffect(() => {
+    if (estado !== 'pendente' || !orderNsu) return;
+    const t = setInterval(confirmar, 4000);
+    return () => clearInterval(t);
+  }, [estado, orderNsu, confirmar]);
+
   return (
     <div className="lojaBody">
       <header className="rotulo">
