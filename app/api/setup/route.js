@@ -68,13 +68,14 @@ export async function POST() {
     // Seed NÃO-destrutivo: só insere o que ainda não existe, para nunca
     // sobrescrever a chave Pix, o PIN ou o estoque real de uma loja em produção.
     const defaultConfig = [
-      { key: 'pixKey', value: '31995076141' },
+      { key: 'pixKey', value: '31996478782' },
       { key: 'pixKeyType', value: 'telefone' },
       { key: 'merchantName', value: 'ESSENCIA NO POTE' },
       { key: 'merchantCity', value: 'BELO HORIZONTE' },
       { key: 'adminPin', value: '2108' },
       { key: 'whatsapp', value: '5531995076141' },
-      { key: 'infinitePayHandle', value: '' }
+      { key: 'infinitePayHandle', value: '' },
+      { key: 'paymentMode', value: 'pix' }
     ];
     const { data: existingConfig } = await supabase.from('config').select('key');
     const existingKeys = new Set((existingConfig || []).map(c => c.key));

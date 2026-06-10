@@ -91,6 +91,11 @@ export default function Admin() {
     const r = await fetch('/api/admin/config', {
       method: 'POST', headers: H(),
       body: JSON.stringify({
+        paymentMode: ajustes?.paymentMode || 'pix',
+        pixKey: ajustes?.pixKey || '',
+        pixKeyType: ajustes?.pixKeyType || 'telefone',
+        merchantName: ajustes?.merchantName || '',
+        merchantCity: ajustes?.merchantCity || '',
         infinitePayHandle: ajustes?.infinitePayHandle || '',
         whatsapp: ajustes?.whatsapp || ''
       })
@@ -261,21 +266,64 @@ export default function Admin() {
 
             {aba === 'ajustes' && (
               <div className="item">
-                <h3 style={{ marginBottom: 10 }}>Pagamento (InfinitePay)</h3>
+                <h3 style={{ marginBottom: 10 }}>Pagamento</h3>
                 <p className="sub2" style={{ marginBottom: 14 }}>
-                  Informe seu InfiniteTag (handle) — é o nome de usuário do app InfinitePay, sem o
-                  &quot;$&quot;. Ele é usado para gerar os links de pagamento da loja.
+                  Escolha como os clientes pagam na loja. O modo <strong>Pix com QR Code</strong> exibe
+                  o QR direto no site; o modo <strong>InfinitePay</strong> redireciona para o checkout externo.
                 </p>
-                <label>InfiniteTag (handle)</label>
-                <input type="text" placeholder="ex: essencianopote"
-                  value={ajustes?.infinitePayHandle || ''}
-                  disabled={ajustes?.infinitePayHandleFromEnv}
-                  onChange={e => setAjustes({ ...ajustes, infinitePayHandle: e.target.value })} />
-                {ajustes?.infinitePayHandleFromEnv && (
-                  <p className="sub2" style={{ marginTop: 6 }}>
-                    Definido pela variável de ambiente INFINITEPAY_HANDLE (tem prioridade sobre este campo).
-                  </p>
+                <label>Modo de pagamento</label>
+                <select
+                  value={ajustes?.paymentMode || 'pix'}
+                  onChange={e => setAjustes({ ...ajustes, paymentMode: e.target.value })}
+                  style={{ width: '100%', padding: '10px', fontSize: '.9rem', borderRadius: 12, border: '2px solid var(--brown)', marginBottom: 12 }}
+                >
+                  <option value="pix">Pix com QR Code na loja</option>
+                  <option value="infinitepay">InfinitePay (checkout externo)</option>
+                </select>
+
+                {(ajustes?.paymentMode || 'pix') === 'pix' && (
+                  <>
+                    <label>Chave Pix</label>
+                    <input type="text" placeholder="31999999999"
+                      value={ajustes?.pixKey || ''}
+                      onChange={e => setAjustes({ ...ajustes, pixKey: e.target.value })} />
+                    <label style={{ marginTop: 12 }}>Tipo da chave</label>
+                    <select
+                      value={ajustes?.pixKeyType || 'telefone'}
+                      onChange={e => setAjustes({ ...ajustes, pixKeyType: e.target.value })}
+                      style={{ width: '100%', padding: '10px', fontSize: '.9rem', borderRadius: 12, border: '2px solid var(--brown)' }}
+                    >
+                      <option value="telefone">Telefone</option>
+                      <option value="cpf">CPF</option>
+                      <option value="email">E-mail</option>
+                      <option value="aleatoria">Chave aleatória</option>
+                    </select>
+                    <label style={{ marginTop: 12 }}>Nome do recebedor (sem acentos, máx. 25)</label>
+                    <input type="text" placeholder="ESSENCIA NO POTE"
+                      value={ajustes?.merchantName || ''}
+                      onChange={e => setAjustes({ ...ajustes, merchantName: e.target.value })} />
+                    <label style={{ marginTop: 12 }}>Cidade (sem acentos, máx. 15)</label>
+                    <input type="text" placeholder="BELO HORIZONTE"
+                      value={ajustes?.merchantCity || ''}
+                      onChange={e => setAjustes({ ...ajustes, merchantCity: e.target.value })} />
+                  </>
                 )}
+
+                {ajustes?.paymentMode === 'infinitepay' && (
+                  <>
+                    <label>InfiniteTag (handle)</label>
+                    <input type="text" placeholder="ex: essencianopote"
+                      value={ajustes?.infinitePayHandle || ''}
+                      disabled={ajustes?.infinitePayHandleFromEnv}
+                      onChange={e => setAjustes({ ...ajustes, infinitePayHandle: e.target.value })} />
+                    {ajustes?.infinitePayHandleFromEnv && (
+                      <p className="sub2" style={{ marginTop: 6 }}>
+                        Definido pela variável de ambiente INFINITEPAY_HANDLE (tem prioridade sobre este campo).
+                      </p>
+                    )}
+                  </>
+                )}
+
                 <label style={{ marginTop: 12 }}>WhatsApp (contato)</label>
                 <input type="text" placeholder="5531999999999"
                   value={ajustes?.whatsapp || ''}

@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS order_items (
 
 -- Inserir configurações padrão
 INSERT INTO config (key, value) VALUES
-  ('pixKey', '31995076141'),
+  ('pixKey', '31996478782'),
   ('pixKeyType', 'telefone'),
   ('merchantName', 'ESSENCIA NO POTE'),
   ('merchantCity', 'BELO HORIZONTE'),

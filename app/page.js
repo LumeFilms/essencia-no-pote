@@ -1,15 +1,21 @@
 'use client';
 import { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
 
 const fmt = v => 'R$ ' + Number(v).toFixed(2).replace('.', ',');
 
 export default function Loja() {
   const [flavors, setFlavors] = useState(null);
   const [cart, setCart] = useState({});
-  const [etapa, setEtapa] = useState('menu'); // menu | checkout
+  const [etapa, setEtapa] = useState('menu'); // menu | checkout | pix | sucesso
   const [nome, setNome] = useState('');
   const [fone, setFone] = useState('');
+  const [pedido, setPedido] = useState(null);
+  const [pixPayload, setPixPayload] = useState('');
+  const [qrUrl, setQrUrl] = useState('');
+  const [copiado, setCopiado] = useState(false);
   const [pagando, setPagando] = useState(false);
+  const [paymentMode, setPaymentMode] = useState('pix');
   const [tapCount, setTapCount] = useState(0);
   const [tapTimer, setTapTimer] = useState(null);
 
@@ -29,6 +35,9 @@ export default function Loja() {
 
   useEffect(() => {
     fetch('/api/flavors').then(r => r.json()).then(setFlavors);
+    fetch('/api/payment/config').then(r => r.json()).then(d => {
+      if (d.paymentMode) setPaymentMode(d.paymentMode);
+    });
   }, []);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [etapa]);
@@ -58,17 +67,51 @@ export default function Loja() {
         body: JSON.stringify({ customerName: nome.trim(), customerPhone: fone.trim(), items })
       });
       const data = await r.json();
-      if (!r.ok || !data.checkoutUrl) {
-        alert(data.error || 'Erro ao iniciar o pagamento');
+      if (!r.ok) {
+        alert(data.error || 'Erro ao criar pedido');
         setPagando(false);
         return;
       }
-      // Redireciona para o checkout da InfinitePay (Pix ou cartão).
-      window.location.href = data.checkoutUrl;
+
+      if (data.paymentMode === 'infinitepay' && data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+        return;
+      }
+
+      if (!data.pixPayload) {
+        alert('Erro ao gerar o Pix. Tente novamente.');
+        setPagando(false);
+        return;
+      }
+
+      setPedido(data.order);
+      setPixPayload(data.pixPayload);
+      setQrUrl(await QRCode.toDataURL(data.pixPayload, {
+        width: 240, margin: 1, color: { dark: '#3D2010', light: '#ffffff' }
+      }));
+      setEtapa('pix');
+      setPagando(false);
     } catch {
       alert('Erro ao iniciar o pagamento. Tente novamente.');
       setPagando(false);
     }
+  }
+
+  async function jaPaguei() {
+    if (!pedido) return;
+    try {
+      await fetch(`/api/orders/${pedido.id}/informar-pagamento`, { method: 'POST' });
+      setEtapa('sucesso');
+    } catch {
+      alert('Erro ao informar pagamento. Tente novamente.');
+    }
+  }
+
+  function copiarPix() {
+    navigator.clipboard.writeText(pixPayload).then(() => {
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    });
   }
 
   const Resumo = () => (
@@ -132,9 +175,50 @@ export default function Loja() {
               <input type="tel" id="fone" placeholder="(31) 9 9999-9999" maxLength={20}
                 value={fone} onChange={e => setFone(e.target.value)} />
               <button className="btn" onClick={criarPedido} disabled={pagando}>
-                {pagando ? 'Indo para o pagamento...' : 'Pagar com Pix ou cartão 💳'}
+                {pagando
+                  ? (paymentMode === 'infinitepay' ? 'Indo para o pagamento...' : 'Gerando QR Code...')
+                  : (paymentMode === 'infinitepay' ? 'Pagar com Pix ou cartão 💳' : 'Pagar com Pix 💚')}
               </button>
               <button className="btn ghost" onClick={() => setEtapa('menu')} disabled={pagando}>← Voltar aos sabores</button>
+            </div>
+          </section>
+        )}
+
+        {etapa === 'pix' && pedido && (
+          <section>
+            <div className="panel">
+              <h3>Pague com Pix</h3>
+              <div style={{ textAlign: 'center' }}><span className="badge">Total: {fmt(pedido.total)}</span></div>
+              <div className="qrbox">{qrUrl && <img src={qrUrl} alt="QR Code Pix" width={240} height={240} />}</div>
+              <div className="copy">
+                <input type="text" readOnly value={pixPayload} />
+                <button onClick={copiarPix}>{copiado ? 'Copiado!' : 'Copiar'}</button>
+              </div>
+              <div className="steps">
+                <b>1.</b> Abra o app do seu banco<br />
+                <b>2.</b> Escaneie o QR Code ou use o <b>Pix copia e cola</b><br />
+                <b>3.</b> Confirme o pagamento e toque no botão abaixo 👇
+              </div>
+              <button className="btn" onClick={jaPaguei}>Já fiz o pagamento ✓</button>
+              <div className="pedido-info">
+                <span className="badge">Pedido #{pedido.id}</span>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {etapa === 'sucesso' && pedido && (
+          <section>
+            <div className="panel done">
+              <div className="big">🎉</div>
+              <h3>Pagamento informado!</h3>
+              <span className="badge">Pedido #{pedido.id}</span>
+              <p style={{ fontSize: '.92rem', color: 'var(--brown-soft)', margin: '8px 0 4px' }}>
+                Vamos conferir o pagamento e preparar seu bolo no pote com muito carinho. 💕
+              </p>
+              <Resumo />
+              <button className="btn" onClick={() => window.open('/recibo/' + pedido.id, '_blank')}>Ver recibo 🧾</button>
+              <button className="btn ghost" onClick={() => location.reload()}>Fazer novo pedido</button>
             </div>
           </section>
         )}

@@ -1,4 +1,4 @@
-import { getConfig, getFlavorById, createOrder } from '@/lib/db-supabase';
+import { getConfig, getFlavorById, createOrder, buildPixPayload } from '@/lib/db-supabase';
 import { createCheckoutLink, getHandle } from '@/lib/infinitepay';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +12,11 @@ function getOrigin(req) {
   return new URL(req.url).origin;
 }
 
+function getPaymentMode(config) {
+  const mode = (config.paymentMode || 'pix').trim().toLowerCase();
+  return mode === 'infinitepay' ? 'infinitepay' : 'pix';
+}
+
 export async function POST(req) {
   try {
     const { customerName, customerPhone, items } = await req.json();
@@ -21,13 +26,7 @@ export async function POST(req) {
     }
 
     const config = await getConfig();
-    const handle = getHandle(config);
-    if (!handle) {
-      return Response.json(
-        { error: 'Pagamento online ainda não está configurado. Tente novamente em breve.' },
-        { status: 503 }
-      );
-    }
+    const paymentMode = getPaymentMode(config);
 
     const orderItems = [];
 
@@ -56,7 +55,6 @@ export async function POST(req) {
 
     const total = +orderItems.reduce((s, i) => s + i.subtotal, 0).toFixed(2);
 
-    // Cria o pedido aguardando pagamento. O estoque NÃO é descontado agora.
     const order = await createOrder({
       customerName: String(customerName).substring(0, 60),
       customerPhone: String(customerPhone || '').substring(0, 20),
@@ -64,7 +62,34 @@ export async function POST(req) {
       total
     });
 
-    // Monta os itens para a InfinitePay (preço em centavos).
+    if (paymentMode === 'pix') {
+      if (!config.pixKey || !config.merchantName || !config.merchantCity) {
+        return Response.json(
+          { error: 'Pagamento Pix ainda não está configurado. Tente novamente em breve.' },
+          { status: 503 }
+        );
+      }
+
+      const pixPayload = buildPixPayload({
+        key: config.pixKey,
+        name: config.merchantName,
+        city: config.merchantCity,
+        amount: total,
+        txid: order.txid,
+        keyType: config.pixKeyType
+      });
+
+      return Response.json({ order, paymentMode: 'pix', pixPayload });
+    }
+
+    const handle = getHandle(config);
+    if (!handle) {
+      return Response.json(
+        { error: 'Pagamento online ainda não está configurado. Tente novamente em breve.' },
+        { status: 503 }
+      );
+    }
+
     const ipItems = orderItems.map(i => ({
       description: i.name,
       price: Math.round(i.price * 100),
@@ -90,7 +115,7 @@ export async function POST(req) {
       return Response.json({ error: 'Não foi possível iniciar o pagamento. Tente novamente.' }, { status: 502 });
     }
 
-    return Response.json({ order, checkoutUrl });
+    return Response.json({ order, paymentMode: 'infinitepay', checkoutUrl });
   } catch (error) {
     console.error('Error creating order:', error);
     return Response.json({ error: 'Erro ao criar pedido' }, { status: 500 });

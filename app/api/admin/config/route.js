@@ -11,7 +11,9 @@ export async function GET(req) {
 
     const config = await getConfig();
     return Response.json({
+      paymentMode: config.paymentMode || 'pix',
       pixKey: config.pixKey,
+      pixKeyType: config.pixKeyType || 'telefone',
       merchantName: config.merchantName,
       merchantCity: config.merchantCity,
       whatsapp: config.whatsapp,
@@ -25,7 +27,10 @@ export async function GET(req) {
 }
 
 // Campos de config que podem ser editados pelo painel admin.
-const EDITABLE = ['infinitePayHandle', 'whatsapp', 'merchantName', 'merchantCity'];
+const EDITABLE = [
+  'paymentMode', 'pixKey', 'pixKeyType', 'merchantName', 'merchantCity',
+  'infinitePayHandle', 'whatsapp'
+];
 
 export async function POST(req) {
   try {
@@ -43,7 +48,9 @@ export async function POST(req) {
 
     const config = await getConfig();
     return Response.json({
+      paymentMode: config.paymentMode || 'pix',
       pixKey: config.pixKey,
+      pixKeyType: config.pixKeyType || 'telefone',
       merchantName: config.merchantName,
       merchantCity: config.merchantCity,
       whatsapp: config.whatsapp,
