@@ -106,7 +106,7 @@ h2.sec::before,h2.sec::after{content:''; height:3px; width:42px; background:var(
 /* ---------- painéis / formulários ---------- */
 .panel{
   background:#fff; border:2.5px solid var(--brown); border-radius:var(--radius);
-  box-shadow:5px 6px 0 var(--pink); padding:24px 20px; margin-top:22px;
+  box-shadow:5px 6px 0 var(--pink); padding:24px 20px; margin-top:22px; margin-bottom:24px;
   animation:pop .4s ease both;
 }
 .panel h3{font-size:1.3rem; margin-bottom:14px; text-align:center}
@@ -146,7 +146,10 @@ input:focus{outline:3px solid var(--pink-soft)}
 .pix-aviso-icon{font-size:2rem; margin-bottom:8px}
 .pix-aviso p{margin:4px 0}
 .pedido-info{text-align:center; margin-top:16px; margin-bottom:16px}
-.panel .btn.ghost{margin-top:16px; display:block; width:100%}
+.panel .btn.ghost{
+  margin-top:16px; display:block; width:100%;
+  position:relative; z-index:2; pointer-events:auto;
+}
 
 /* ---------- sucesso ---------- */
 .done{text-align:center}

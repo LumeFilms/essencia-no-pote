@@ -72,9 +72,29 @@ export default function Loja() {
     });
   };
 
-  const itensCart = Object.entries(cart).map(([id, q]) => ({ f: flavors.find(f => f.id === id), q }));
+  const itensCart = flavors
+    ? Object.entries(cart)
+        .map(([id, q]) => ({ f: flavors.find(f => f.id === id), q }))
+        .filter(i => i.f)
+    : [];
   const qtd = itensCart.reduce((s, i) => s + i.q, 0);
   const val = itensCart.reduce((s, i) => s + i.f.price * i.q, 0);
+
+  function voltarAoMenu({ limparPedido = false, limparCarrinho = false } = {}) {
+    setPagando(false);
+    if (limparPedido) {
+      setPedido(null);
+      setPixPayload('');
+      setQrUrl('');
+      setPagamentoConfirmado(false);
+    }
+    if (limparCarrinho) {
+      setCart({});
+      setNome('');
+      setFone('');
+    }
+    setEtapa('menu');
+  }
 
   async function criarPedido() {
     if (!nome.trim()) { alert('Conta pra gente seu nome! 😊'); return; }
@@ -194,12 +214,14 @@ export default function Loja() {
               <label htmlFor="fone">WhatsApp (opcional)</label>
               <input type="tel" id="fone" placeholder="(31) 9 9999-9999" maxLength={20}
                 value={fone} onChange={e => setFone(e.target.value)} />
-              <button className="btn" onClick={criarPedido} disabled={pagando}>
+              <button type="button" className="btn" onClick={criarPedido} disabled={pagando}>
                 {pagando
                   ? (paymentMode === 'infinitepay' ? 'Indo para o pagamento...' : 'Gerando QR Code...')
                   : (paymentMode === 'infinitepay' ? 'Pagar com Pix ou cartão 💳' : 'Pagar com Pix 💚')}
               </button>
-              <button className="btn ghost" onClick={() => setEtapa('menu')} disabled={pagando}>← Voltar aos sabores</button>
+              <button type="button" className="btn ghost" onClick={() => voltarAoMenu()} disabled={pagando}>
+                ← Voltar aos sabores
+              </button>
             </div>
           </section>
         )}
@@ -224,10 +246,13 @@ export default function Loja() {
                 <p><strong>Aguardando pagamento...</strong></p>
                 <p>Esta página atualiza sozinha quando confirmarmos seu pagamento.</p>
               </div>
-              <button className="btn" onClick={jaPaguei}>Já fiz o pagamento ✓</button>
+              <button type="button" className="btn" onClick={jaPaguei}>Já fiz o pagamento ✓</button>
               <div className="pedido-info">
                 <span className="badge">Pedido #{pedido.id}</span>
               </div>
+              <button type="button" className="btn ghost" onClick={() => voltarAoMenu({ limparPedido: true })}>
+                ← Voltar aos sabores
+              </button>
             </div>
           </section>
         )}
@@ -244,8 +269,10 @@ export default function Loja() {
                   : 'Vamos conferir o pagamento. Esta página atualiza sozinha quando for confirmado. 💕'}
               </p>
               <Resumo />
-              <button className="btn" onClick={() => window.open('/recibo/' + pedido.id, '_blank')}>Ver recibo 🧾</button>
-              <button className="btn ghost" onClick={() => location.reload()}>Fazer novo pedido</button>
+              <button type="button" className="btn" onClick={() => window.open('/recibo/' + pedido.id, '_blank')}>Ver recibo 🧾</button>
+              <button type="button" className="btn ghost" onClick={() => voltarAoMenu({ limparPedido: true, limparCarrinho: true })}>
+                Fazer novo pedido
+              </button>
             </div>
           </section>
         )}
