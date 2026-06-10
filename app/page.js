@@ -186,6 +186,14 @@ export default function Loja() {
               <div className="pedido-info">
                 <span className="badge">Pedido #{pedido.id}</span>
               </div>
+              <button className="btn ghost" onClick={() => {
+                if (polling) clearInterval(polling);
+                setEtapa('menu');
+                setPedido(null);
+                setPixPayload('');
+                setQrUrl('');
+                setCart({});
+              }}>← Voltar à loja</button>
             </div>
           </section>
         )}
@@ -201,7 +209,15 @@ export default function Loja() {
               </p>
               <Resumo />
               <button className="btn" onClick={() => window.open('/recibo/' + pedido.id, '_blank')}>Ver recibo 🧾</button>
-              <button className="btn ghost" onClick={() => location.reload()}>Fazer novo pedido</button>
+              <button className="btn ghost" onClick={() => {
+                setEtapa('menu');
+                setPedido(null);
+                setPixPayload('');
+                setQrUrl('');
+                setCart({});
+                setNome('');
+                setFone('');
+              }}>Fazer novo pedido</button>
             </div>
           </section>
         )}
