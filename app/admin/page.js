@@ -10,6 +10,36 @@ const statusTxt = {
   cancelado: 'Cancelado'
 };
 
+function ConfirmModal({ modal, onClose, onConfirm }) {
+  if (!modal) return null;
+  return (
+    <div className="modal-overlay" onClick={() => !modal.loading && onClose()}>
+      <div className="modal-box" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
+        <h3>{modal.title}</h3>
+        <p>{modal.message}</p>
+        {modal.detail && (
+          <div className={'modal-detail' + (modal.variant === 'danger' ? ' warn' : '')}>
+            {modal.detail}
+          </div>
+        )}
+        <div className="modal-actions">
+          <button type="button" className="abtn sm ghost-btn" onClick={onClose} disabled={modal.loading}>
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className={'abtn sm ' + (modal.variant === 'danger' ? 'del' : 'no')}
+            onClick={onConfirm}
+            disabled={modal.loading}
+          >
+            {modal.loading ? 'Aguarde...' : modal.confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Admin() {
   const [pin, setPin] = useState('');
   const [logado, setLogado] = useState(false);
@@ -21,70 +51,138 @@ export default function Admin() {
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [ajustes, setAjustes] = useState(null);
   const [salvandoAjustes, setSalvandoAjustes] = useState(false);
+  const [carregando, setCarregando] = useState(false);
+  const [confirmModal, setConfirmModal] = useState(null);
 
   const H = useCallback(() => ({ 'Content-Type': 'application/json', 'x-pin': pin }), [pin]);
 
-  const carregarTudo = useCallback(async (p) => {
+  const recarregarDoBanco = useCallback(async (p, { silencioso = false } = {}) => {
+    if (!silencioso) setCarregando(true);
     const h = { 'Content-Type': 'application/json', 'x-pin': p || pin };
-    const [rs, ro, rf, rc] = await Promise.all([
-      fetch('/api/admin/resumo', { headers: h }),
-      fetch('/api/admin/orders', { headers: h }),
-      fetch('/api/admin/flavors', { headers: h }),
-      fetch('/api/admin/config', { headers: h })
-    ]);
-    if (rs.ok) setStats(await rs.json());
-    if (ro.ok) setOrders(await ro.json());
-    if (rf.ok) setFlavors(await rf.json());
-    if (rc.ok) setAjustes(await rc.json());
+    const ts = Date.now();
+    try {
+      const [rs, ro, rf, rc] = await Promise.all([
+        fetch(`/api/admin/resumo?_=${ts}`, { headers: h, cache: 'no-store' }),
+        fetch(`/api/admin/orders?_=${ts}`, { headers: h, cache: 'no-store' }),
+        fetch(`/api/admin/flavors?_=${ts}`, { headers: h, cache: 'no-store' }),
+        fetch(`/api/admin/config?_=${ts}`, { headers: h, cache: 'no-store' })
+      ]);
+      if (rs.ok) setStats(await rs.json());
+      if (ro.ok) setOrders(await ro.json());
+      if (rf.ok) setFlavors(await rf.json());
+      if (rc.ok) setAjustes(await rc.json());
+    } finally {
+      if (!silencioso) setCarregando(false);
+    }
   }, [pin]);
 
   useEffect(() => {
     const saved = sessionStorage.getItem('pin');
     if (saved) {
       fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: saved }) })
-        .then(r => { if (r.ok) { setPin(saved); setLogado(true); carregarTudo(saved); } });
+        .then(r => { if (r.ok) { setPin(saved); setLogado(true); recarregarDoBanco(saved); } });
     }
   }, []); // eslint-disable-line
 
   useEffect(() => {
     if (!logado) return;
-    const t = setInterval(() => carregarTudo(), 30000);
+    const t = setInterval(() => recarregarDoBanco(undefined, { silencioso: true }), 30000);
     return () => clearInterval(t);
-  }, [logado, carregarTudo]);
+  }, [logado, recarregarDoBanco]);
+
+  function abrirConfirmacao(config) {
+    setConfirmModal({ ...config, loading: false });
+  }
+
+  function fecharModal() {
+    if (confirmModal?.loading) return;
+    setConfirmModal(null);
+  }
+
+  async function executarConfirmacao() {
+    if (!confirmModal?.onConfirm) return;
+    setConfirmModal(m => ({ ...m, loading: true }));
+    try {
+      await confirmModal.onConfirm();
+      setConfirmModal(null);
+    } catch {
+      setConfirmModal(m => ({ ...m, loading: false }));
+      alert('Erro na operação. Tente novamente.');
+    }
+  }
 
   async function entrar() {
     const r = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) });
     if (!r.ok) { alert('PIN incorreto'); return; }
     sessionStorage.setItem('pin', pin);
     setLogado(true);
-    carregarTudo();
+    recarregarDoBanco();
   }
 
   async function mudarStatus(id, status) {
-    await fetch(`/api/admin/orders/${id}/status`, { method: 'POST', headers: H(), body: JSON.stringify({ status }) });
-    carregarTudo();
+    const r = await fetch(`/api/admin/orders/${id}/status`, {
+      method: 'POST', headers: H(), body: JSON.stringify({ status }), cache: 'no-store'
+    });
+    if (!r.ok) { alert('Erro ao atualizar pedido'); return; }
+    await recarregarDoBanco();
   }
-  async function excluirPedido(id, status) {
-    const aviso = status === 'pago'
-      ? `Excluir pedido #${id}? O estoque será devolvido. Esta ação não pode ser desfeita.`
-      : `Excluir pedido #${id} permanentemente? Esta ação não pode ser desfeita.`;
-    if (!confirm(aviso)) return;
-    const r = await fetch(`/api/admin/orders/${id}`, { method: 'DELETE', headers: H() });
-    if (!r.ok) { alert('Erro ao excluir pedido'); return; }
-    carregarTudo();
+
+  function pedirCancelarPedido(order) {
+    abrirConfirmacao({
+      title: 'Cancelar pedido?',
+      message: `#${order.id} · ${order.customerName}`,
+      detail: order.status === 'pago'
+        ? 'O estoque será devolvido automaticamente.'
+        : 'O pedido será marcado como cancelado.',
+      confirmLabel: 'Sim, cancelar',
+      variant: 'warning',
+      onConfirm: () => mudarStatus(order.id, 'cancelado')
+    });
   }
+
+  function pedirExcluirPedido(order) {
+    abrirConfirmacao({
+      title: 'Excluir pedido?',
+      message: `#${order.id} · ${order.customerName} · ${fmt(order.total)}`,
+      detail: order.status === 'pago'
+        ? 'O estoque será devolvido e o pedido será removido permanentemente do banco de dados.'
+        : 'O pedido será removido permanentemente do banco de dados. Esta ação não pode ser desfeita.',
+      confirmLabel: 'Sim, excluir',
+      variant: 'danger',
+      onConfirm: async () => {
+        const r = await fetch(`/api/admin/orders/${order.id}`, { method: 'DELETE', headers: H(), cache: 'no-store' });
+        if (!r.ok) throw new Error('delete failed');
+        setOrders(prev => prev.filter(o => o.id !== order.id));
+        await recarregarDoBanco();
+      }
+    });
+  }
+
+  function pedirExcluirSabor(flavor) {
+    abrirConfirmacao({
+      title: 'Excluir sabor?',
+      message: `${flavor.emoji || '🍰'} ${flavor.name}`,
+      detail: 'O sabor será removido permanentemente do banco de dados.',
+      confirmLabel: 'Sim, excluir',
+      variant: 'danger',
+      onConfirm: async () => {
+        const r = await fetch('/api/admin/flavors/' + flavor.id, { method: 'DELETE', headers: H(), cache: 'no-store' });
+        if (!r.ok) throw new Error('delete failed');
+        setFlavors(prev => prev.filter(f => f.id !== flavor.id));
+        await recarregarDoBanco();
+      }
+    });
+  }
+
   async function editarSabor(id, body) {
-    await fetch('/api/admin/flavors/' + id, { method: 'PUT', headers: H(), body: JSON.stringify(body) });
-    carregarTudo();
+    await fetch('/api/admin/flavors/' + id, { method: 'PUT', headers: H(), body: JSON.stringify(body), cache: 'no-store' });
+    await recarregarDoBanco(undefined, { silencioso: true });
   }
-  async function excluirSabor(id) {
-    await fetch('/api/admin/flavors/' + id, { method: 'DELETE', headers: H() });
-    carregarTudo();
-  }
+
   async function novoSabor() {
     if (!novo.name || !novo.price) { alert('Preencha nome e preço'); return; }
-    const r = await fetch('/api/admin/flavors', { method: 'POST', headers: H(), body: JSON.stringify(novo) });
-    if (r.ok) { setNovo({ name: '', desc: '', price: '', stock: '', emoji: '' }); carregarTudo(); }
+    const r = await fetch('/api/admin/flavors', { method: 'POST', headers: H(), body: JSON.stringify(novo), cache: 'no-store' });
+    if (r.ok) { setNovo({ name: '', desc: '', price: '', stock: '', emoji: '' }); await recarregarDoBanco(); }
   }
 
   async function gerarQRCode() {
@@ -107,7 +205,8 @@ export default function Admin() {
         merchantCity: ajustes?.merchantCity || '',
         infinitePayHandle: ajustes?.infinitePayHandle || '',
         whatsapp: ajustes?.whatsapp || ''
-      })
+      }),
+      cache: 'no-store'
     });
     if (r.ok) {
       setAjustes(await r.json());
@@ -120,6 +219,8 @@ export default function Admin() {
 
   return (
     <div className="adminBody">
+      <ConfirmModal modal={confirmModal} onClose={fecharModal} onConfirm={executarConfirmacao} />
+
       <header>
         <a href="/" className="back-link">← Voltar à loja</a>
         <div className="alogo script">Essência no Pote</div>
@@ -134,12 +235,14 @@ export default function Admin() {
             <input type="password" placeholder="PIN" inputMode="numeric" value={pin}
               onChange={e => setPin(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && entrar()} />
-            <button className="abtn" onClick={entrar}>Entrar</button>
+            <button type="button" className="abtn" onClick={entrar}>Entrar</button>
           </div>
         )}
 
         {logado && (
           <>
+            {carregando && <div className="loading-bar">Atualizando dados...</div>}
+
             {stats && (
               <div className="stats">
                 <div className="stat"><div className="v">{stats.pendentes}</div><div className="l">A confirmar</div></div>
@@ -158,7 +261,7 @@ export default function Admin() {
 
             {aba === 'pedidos' && (
               <div>
-                {orders.length === 0 && <div className="empty">Nenhum pedido ainda</div>}
+                {orders.length === 0 && !carregando && <div className="empty">Nenhum pedido no banco de dados</div>}
                 {orders.map(o => (
                   <div className="item" key={o.id}>
                     <div className="head">
@@ -176,11 +279,11 @@ export default function Admin() {
                       <span className="atot">{fmt(o.total)}</span>
                       <div className="acts">
                         {o.status !== 'pago' && o.status !== 'cancelado' &&
-                          <button className="abtn sm ok" onClick={() => mudarStatus(o.id, 'pago')}>Confirmar pgto ✓</button>}
+                          <button type="button" className="abtn sm ok" onClick={() => mudarStatus(o.id, 'pago')}>Confirmar pgto ✓</button>}
                         {o.status !== 'cancelado' &&
-                          <button className="abtn sm no" onClick={() => confirm(`Cancelar pedido #${o.id}? O estoque será devolvido.`) && mudarStatus(o.id, 'cancelado')}>Cancelar</button>}
+                          <button type="button" className="abtn sm no" onClick={() => pedirCancelarPedido(o)}>Cancelar</button>}
                         <button type="button" className="abtn sm dark" onClick={() => window.open('/recibo/' + o.id, '_blank')}>Recibo 🧾</button>
-                        <button type="button" className="abtn sm del" onClick={() => excluirPedido(o.id, o.status)}>Excluir</button>
+                        <button type="button" className="abtn sm del" onClick={() => pedirExcluirPedido(o)}>Excluir</button>
                       </div>
                     </div>
                   </div>
@@ -204,7 +307,7 @@ export default function Admin() {
                     <div><label>Emoji</label>
                       <input type="text" maxLength={4} placeholder="🍰" value={novo.emoji} onChange={e => setNovo({ ...novo, emoji: e.target.value })} /></div>
                     <div style={{ display: 'flex', alignItems: 'end' }}>
-                      <button className="abtn" style={{ width: '100%' }} onClick={novoSabor}>Adicionar +</button>
+                      <button type="button" className="abtn" style={{ width: '100%' }} onClick={novoSabor}>Adicionar +</button>
                     </div>
                   </div>
                 </div>
@@ -223,11 +326,11 @@ export default function Admin() {
                     <div className="acts">
                       <label style={{ margin: 0 }}>Estoque:</label>
                       <div className="stock-control">
-                        <button className="stock-btn" onClick={() => editarSabor(f.id, { stock: Math.max(0, f.stock - 1) })}>−</button>
+                        <button type="button" className="stock-btn" onClick={() => editarSabor(f.id, { stock: Math.max(0, f.stock - 1) })}>−</button>
                         <input type="number" style={{ width: 60, textAlign: 'center' }} min="0" value={f.stock}
                           onChange={e => editarSabor(f.id, { stock: Math.max(0, +e.target.value) })} />
-                        <button className="stock-btn" onClick={() => editarSabor(f.id, { stock: f.stock + 1 })}>+</button>
-                        <button className="stock-btn add-stock" onClick={() => {
+                        <button type="button" className="stock-btn" onClick={() => editarSabor(f.id, { stock: f.stock + 1 })}>+</button>
+                        <button type="button" className="stock-btn add-stock" onClick={() => {
                           const qtd = prompt(`Adicionar estoque para ${f.name}:`, '10');
                           if (qtd && +qtd > 0) editarSabor(f.id, { stock: f.stock + +qtd });
                         }}>+N</button>
@@ -235,8 +338,8 @@ export default function Admin() {
                       <label style={{ margin: 0 }}>Preço:</label>
                       <input type="number" style={{ width: 90 }} step="0.50" min="0" value={f.price}
                         onChange={e => editarSabor(f.id, { price: +e.target.value })} />
-                      <button className="abtn sm" onClick={() => editarSabor(f.id, { active: !f.active })}>{f.active ? 'Desativar' : 'Ativar'}</button>
-                      <button className="abtn sm no" onClick={() => confirm(`Excluir ${f.name}?`) && excluirSabor(f.id)}>Excluir</button>
+                      <button type="button" className="abtn sm" onClick={() => editarSabor(f.id, { active: !f.active })}>{f.active ? 'Desativar' : 'Ativar'}</button>
+                      <button type="button" className="abtn sm del" onClick={() => pedirExcluirSabor(f)}>Excluir</button>
                     </div>
                   </div>
                 ))}
@@ -262,7 +365,7 @@ export default function Admin() {
                         <li>Clientes escaneiam e acessam a loja</li>
                       </ol>
                     </div>
-                    <button className="abtn" onClick={() => {
+                    <button type="button" className="abtn" onClick={() => {
                       const link = document.createElement('a');
                       link.download = 'qrcode-essencia-no-pote.png';
                       link.href = qrCodeUrl;
@@ -340,7 +443,7 @@ export default function Admin() {
                 <input type="text" placeholder="5531999999999"
                   value={ajustes?.whatsapp || ''}
                   onChange={e => setAjustes({ ...ajustes, whatsapp: e.target.value })} />
-                <button className="abtn" style={{ marginTop: 14 }} onClick={salvarAjustes} disabled={salvandoAjustes}>
+                <button type="button" className="abtn" style={{ marginTop: 14 }} onClick={salvarAjustes} disabled={salvandoAjustes}>
                   {salvandoAjustes ? 'Salvando...' : 'Salvar ajustes'}
                 </button>
               </div>
@@ -349,7 +452,7 @@ export default function Admin() {
         )}
       </div>
 
-      {logado && <button className="refresh" title="Atualizar" onClick={() => carregarTudo()}>↻</button>}
+      {logado && <button type="button" className="refresh" title="Atualizar" onClick={() => recarregarDoBanco()}>↻</button>}
     </div>
   );
 }

@@ -11,7 +11,9 @@ export async function DELETE(req, { params }) {
 
     const { id } = await params;
     await deleteOrder(id);
-    return Response.json({ ok: true });
+    return Response.json({ ok: true, deletedId: id }, {
+      headers: { 'Cache-Control': 'no-store' }
+    });
   } catch (error) {
     console.error('Error deleting order:', error);
     if (error.message === 'Pedido não encontrado') {

@@ -473,7 +473,7 @@ footer.loja .script{font-size:1.2rem; color:var(--pink); display:block; margin-b
   box-shadow:var(--shadow-sm);
   border:1px solid rgba(196,165,116,.15);
   animation:fadeUp .4s var(--ease) both;
-  transition:box-shadow .2s;
+  transition:box-shadow .2s, transform .2s var(--ease), border-color .2s;
 }
 .item:hover{
   box-shadow:var(--shadow-md);
@@ -626,6 +626,56 @@ button:focus-visible,.abtn:focus-visible,.btn:focus-visible,.stock-btn:focus-vis
 .acessoSub{font-size:.8rem; color:var(--brown-soft); opacity:.7}
 .acessoFooter{margin-top:30px; padding-top:20px; border-top:1px dashed rgba(196,165,116,.3)}
 .acessoFooter .script{font-size:1.1rem; color:var(--pink)}
+
+/* ---------- modal confirmação ---------- */
+.modal-overlay{
+  position:fixed; inset:0; z-index:200;
+  background:rgba(26,15,10,.65); backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center;
+  padding:20px; animation:fadeIn .2s var(--ease);
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-box{
+  background:var(--white); color:var(--brown);
+  border-radius:var(--radius-lg); padding:28px 24px;
+  max-width:400px; width:100%;
+  box-shadow:var(--shadow-lg);
+  border:1px solid rgba(196,165,116,.25);
+  animation:fadeUp .25s var(--ease) both;
+}
+.modal-box h3{
+  font-family:'Cormorant Garamond',serif; font-size:1.45rem;
+  font-weight:600; margin-bottom:10px; color:var(--brown);
+}
+.modal-box p{font-size:.92rem; color:var(--brown-soft); line-height:1.5}
+.modal-detail{
+  margin-top:14px; padding:12px 14px;
+  background:var(--cream); border-radius:12px;
+  border:1px solid rgba(196,165,116,.25);
+  font-size:.84rem; color:var(--brown-mid); line-height:1.5;
+}
+.modal-detail strong{color:var(--brown); font-weight:700}
+.modal-detail.warn{
+  background:#FEF2F2; border-color:#FECACA; color:#991B1B;
+}
+.modal-actions{
+  display:flex; gap:10px; margin-top:22px; justify-content:flex-end;
+}
+.modal-actions .abtn{flex:1; margin:0}
+.modal-actions .abtn.ghost-btn{
+  background:var(--cream); color:var(--brown-soft);
+  border:2px solid rgba(44,24,16,.12); box-shadow:none;
+}
+.modal-actions .abtn.ghost-btn:hover{
+  background:var(--cream-deep); color:var(--brown); border-color:rgba(44,24,16,.2);
+}
+.loading-bar{
+  text-align:center; padding:8px; font-size:.78rem;
+  color:rgba(255,255,255,.6); letter-spacing:.04em;
+}
+.loading-bar.loja{
+  color:var(--brown-soft); padding:16px;
+}
 
 @media (max-width:480px){
   .wrap,.awrap{padding:0 16px}

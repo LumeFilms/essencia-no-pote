@@ -10,7 +10,9 @@ export async function GET(req) {
     }
 
     const orders = await getOrders();
-    return Response.json(orders);
+    return Response.json(orders, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' }
+    });
   } catch (error) {
     console.error('Error fetching orders:', error);
     return Response.json({ error: 'Erro ao buscar pedidos' }, { status: 500 });

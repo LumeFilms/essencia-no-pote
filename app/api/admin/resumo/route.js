@@ -10,7 +10,9 @@ export async function GET(req) {
     }
 
     const stats = await getStats();
-    return Response.json(stats);
+    return Response.json(stats, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' }
+    });
   } catch (error) {
     console.error('Error fetching stats:', error);
     return Response.json({ error: 'Erro ao buscar estatísticas' }, { status: 500 });
