@@ -50,7 +50,8 @@ export async function POST(req) {
       name: config.merchantName,
       city: config.merchantCity,
       amount: total,
-      txid: order.txid
+      txid: order.txid,
+      keyType: config.pixKeyType
     });
 
     return Response.json({ order, pixPayload, pixKey: config.pixKey });
