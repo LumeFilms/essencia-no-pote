@@ -47,7 +47,7 @@ export default function Admin() {
   const [stats, setStats] = useState(null);
   const [orders, setOrders] = useState([]);
   const [flavors, setFlavors] = useState([]);
-  const [novo, setNovo] = useState({ name: '', desc: '', price: '', stock: '', emoji: '' });
+  const [novo, setNovo] = useState({ name: '', desc: '', price: '', stock: '' });
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [ajustes, setAjustes] = useState(null);
   const [salvandoAjustes, setSalvandoAjustes] = useState(false);
@@ -161,7 +161,7 @@ export default function Admin() {
   function pedirExcluirSabor(flavor) {
     abrirConfirmacao({
       title: 'Excluir sabor?',
-      message: `${flavor.emoji || '🍰'} ${flavor.name}`,
+      message: flavor.name,
       detail: 'O sabor será removido permanentemente do banco de dados.',
       confirmLabel: 'Sim, excluir',
       variant: 'danger',
@@ -182,7 +182,7 @@ export default function Admin() {
   async function novoSabor() {
     if (!novo.name || !novo.price) { alert('Preencha nome e preço'); return; }
     const r = await fetch('/api/admin/flavors', { method: 'POST', headers: H(), body: JSON.stringify(novo), cache: 'no-store' });
-    if (r.ok) { setNovo({ name: '', desc: '', price: '', stock: '', emoji: '' }); await recarregarDoBanco(); }
+    if (r.ok) { setNovo({ name: '', desc: '', price: '', stock: '' }); await recarregarDoBanco(); }
   }
 
   async function gerarQRCode() {
@@ -292,54 +292,90 @@ export default function Admin() {
             )}
 
             {aba === 'sabores' && (
-              <div>
-                <div className="item">
-                  <h3 style={{ marginBottom: 10 }}>Novo sabor</h3>
-                  <div className="fgrid">
-                    <div className="full"><label>Nome</label>
-                      <input type="text" value={novo.name} onChange={e => setNovo({ ...novo, name: e.target.value })} /></div>
-                    <div className="full"><label>Descrição</label>
-                      <input type="text" value={novo.desc} onChange={e => setNovo({ ...novo, desc: e.target.value })} /></div>
-                    <div><label>Preço (R$)</label>
-                      <input type="number" step="0.50" min="0" value={novo.price} onChange={e => setNovo({ ...novo, price: e.target.value })} /></div>
-                    <div><label>Estoque</label>
-                      <input type="number" min="0" value={novo.stock} onChange={e => setNovo({ ...novo, stock: e.target.value })} /></div>
-                    <div><label>Emoji</label>
-                      <input type="text" maxLength={4} placeholder="🍰" value={novo.emoji} onChange={e => setNovo({ ...novo, emoji: e.target.value })} /></div>
-                    <div style={{ display: 'flex', alignItems: 'end' }}>
-                      <button type="button" className="abtn" style={{ width: '100%' }} onClick={novoSabor}>Adicionar +</button>
+              <div className="flavors-admin">
+                <div className="flavor-form-card">
+                  <div className="flavor-form-head">
+                    <h3 className="serif">Novo sabor</h3>
+                    <p>Adicione um produto ao cardápio da loja</p>
+                  </div>
+                  <div className="flavor-form-grid">
+                    <div className="ffull">
+                      <label>Nome do sabor</label>
+                      <input type="text" placeholder="Ex: Brigadeiro" value={novo.name}
+                        onChange={e => setNovo({ ...novo, name: e.target.value })} />
+                    </div>
+                    <div className="ffull">
+                      <label>Descrição</label>
+                      <input type="text" placeholder="Breve descrição para o cliente" value={novo.desc}
+                        onChange={e => setNovo({ ...novo, desc: e.target.value })} />
+                    </div>
+                    <div>
+                      <label>Preço (R$)</label>
+                      <input type="number" step="0.50" min="0" placeholder="12.00" value={novo.price}
+                        onChange={e => setNovo({ ...novo, price: e.target.value })} />
+                    </div>
+                    <div>
+                      <label>Estoque inicial</label>
+                      <input type="number" min="0" placeholder="20" value={novo.stock}
+                        onChange={e => setNovo({ ...novo, stock: e.target.value })} />
+                    </div>
+                    <div className="ffull">
+                      <button type="button" className="abtn flavor-add-btn" onClick={novoSabor}>
+                        Adicionar ao cardápio
+                      </button>
                     </div>
                   </div>
                 </div>
+
+                <div className="flavor-list-head">
+                  <h3 className="serif">Cardápio</h3>
+                  <span className="flavor-count">{flavors.length} {flavors.length === 1 ? 'sabor' : 'sabores'}</span>
+                </div>
+
+                {flavors.length === 0 && !carregando && (
+                  <div className="empty">Nenhum sabor cadastrado</div>
+                )}
+
                 {flavors.map(f => (
-                  <div className={'item' + (f.stock === 0 ? ' out-of-stock' : '')} key={f.id}>
-                    <div className="head">
-                      <h3>
-                        {f.emoji || '🍰'} {f.name}
-                        {!f.active && <span className="pill p-cancelado">inativo</span>}
-                        {f.stock === 0 && <span className="pill p-esgotado">ESGOTADO</span>}
-                        {f.stock > 0 && f.stock <= 3 && <span className="pill p-baixo">últimas {f.stock}!</span>}
-                      </h3>
-                      <span className="atot">{fmt(f.price)}</span>
-                    </div>
-                    <div className="sub2">{f.desc}</div>
-                    <div className="acts">
-                      <label style={{ margin: 0 }}>Estoque:</label>
-                      <div className="stock-control">
-                        <button type="button" className="stock-btn" onClick={() => editarSabor(f.id, { stock: Math.max(0, f.stock - 1) })}>−</button>
-                        <input type="number" style={{ width: 60, textAlign: 'center' }} min="0" value={f.stock}
-                          onChange={e => editarSabor(f.id, { stock: Math.max(0, +e.target.value) })} />
-                        <button type="button" className="stock-btn" onClick={() => editarSabor(f.id, { stock: f.stock + 1 })}>+</button>
-                        <button type="button" className="stock-btn add-stock" onClick={() => {
-                          const qtd = prompt(`Adicionar estoque para ${f.name}:`, '10');
-                          if (qtd && +qtd > 0) editarSabor(f.id, { stock: f.stock + +qtd });
-                        }}>+N</button>
+                  <div className={'flavor-card' + (!f.active ? ' inactive' : '') + (f.stock === 0 ? ' sold' : '')} key={f.id}>
+                    <div className="flavor-card-top">
+                      <div className="flavor-info">
+                        <h4 className="serif">{f.name}</h4>
+                        {f.desc && <p className="flavor-desc">{f.desc}</p>}
+                        <div className="flavor-badges">
+                          {!f.active && <span className="pill p-cancelado">Inativo</span>}
+                          {f.active && f.stock === 0 && <span className="pill p-esgotado">Esgotado</span>}
+                          {f.active && f.stock > 0 && f.stock <= 3 && <span className="pill p-baixo">Últimas {f.stock}</span>}
+                          {f.active && f.stock > 3 && <span className="pill p-ativo">Disponível</span>}
+                        </div>
                       </div>
-                      <label style={{ margin: 0 }}>Preço:</label>
-                      <input type="number" style={{ width: 90 }} step="0.50" min="0" value={f.price}
-                        onChange={e => editarSabor(f.id, { price: +e.target.value })} />
-                      <button type="button" className="abtn sm" onClick={() => editarSabor(f.id, { active: !f.active })}>{f.active ? 'Desativar' : 'Ativar'}</button>
-                      <button type="button" className="abtn sm del" onClick={() => pedirExcluirSabor(f)}>Excluir</button>
+                      <div className="flavor-price-tag">{fmt(f.price)}</div>
+                    </div>
+
+                    <div className="flavor-controls">
+                      <div className="flavor-field">
+                        <label>Estoque</label>
+                        <div className="stock-control premium">
+                          <button type="button" className="stock-btn" onClick={() => editarSabor(f.id, { stock: Math.max(0, f.stock - 1) })}>−</button>
+                          <span className="stock-val">{f.stock}</span>
+                          <button type="button" className="stock-btn" onClick={() => editarSabor(f.id, { stock: f.stock + 1 })}>+</button>
+                          <button type="button" className="stock-btn add-stock" onClick={() => {
+                            const qtd = prompt(`Adicionar estoque para ${f.name}:`, '10');
+                            if (qtd && +qtd > 0) editarSabor(f.id, { stock: f.stock + +qtd });
+                          }}>+10</button>
+                        </div>
+                      </div>
+                      <div className="flavor-field">
+                        <label>Preço</label>
+                        <input type="number" className="flavor-price-input" step="0.50" min="0" value={f.price}
+                          onChange={e => editarSabor(f.id, { price: +e.target.value })} />
+                      </div>
+                      <div className="flavor-actions">
+                        <button type="button" className="abtn sm ghost-btn" onClick={() => editarSabor(f.id, { active: !f.active })}>
+                          {f.active ? 'Desativar' : 'Ativar'}
+                        </button>
+                        <button type="button" className="abtn sm del" onClick={() => pedirExcluirSabor(f)}>Excluir</button>
+                      </div>
                     </div>
                   </div>
                 ))}

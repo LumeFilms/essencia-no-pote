@@ -501,6 +501,80 @@ footer.loja .script{font-size:1.2rem; color:var(--pink); display:block; margin-b
 .fgrid .full{grid-column:1/-1}
 .fgrid input{padding:12px; font-size:.9rem; background:var(--cream)}
 .fgrid label{margin:0 0 4px; font-size:.68rem}
+
+/* ---------- admin sabores premium ---------- */
+.flavors-admin{margin-top:4px}
+.flavor-form-card{
+  background:var(--white); border-radius:var(--radius-lg);
+  border:1px solid rgba(196,165,116,.2); box-shadow:var(--shadow-md);
+  padding:26px 24px; margin-bottom:28px; overflow:hidden; position:relative;
+}
+.flavor-form-card::before{
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background:linear-gradient(90deg, var(--gold), var(--pink), var(--gold));
+}
+.flavor-form-head{margin-bottom:20px}
+.flavor-form-head h3{font-size:1.5rem; font-weight:600; color:var(--brown); margin-bottom:4px}
+.flavor-form-head p{font-size:.84rem; color:var(--brown-soft)}
+.flavor-form-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+.flavor-form-grid .ffull{grid-column:1/-1}
+.flavor-form-grid label{margin:0 0 5px; font-size:.68rem}
+.flavor-form-grid input{padding:12px 14px; font-size:.92rem; background:var(--cream)}
+.flavor-add-btn{width:100%; margin-top:4px}
+.flavor-list-head{
+  display:flex; align-items:baseline; justify-content:space-between;
+  margin-bottom:16px; padding:0 4px;
+}
+.flavor-list-head h3{font-size:1.35rem; font-weight:600; color:var(--cream)}
+.flavor-count{font-size:.72rem; color:rgba(255,255,255,.45); letter-spacing:.06em; text-transform:uppercase}
+.flavor-card{
+  background:var(--white); border-radius:var(--radius-lg);
+  border:1px solid rgba(196,165,116,.18); box-shadow:var(--shadow-sm);
+  padding:22px 24px; margin-bottom:14px;
+  transition:box-shadow .2s var(--ease), transform .2s var(--ease), border-color .2s;
+}
+.flavor-card:hover{box-shadow:var(--shadow-md); border-color:rgba(232,135,138,.25)}
+.flavor-card.inactive{opacity:.7}
+.flavor-card.sold{border-color:rgba(153,27,27,.2)}
+.flavor-card-top{
+  display:flex; justify-content:space-between; align-items:flex-start;
+  gap:16px; margin-bottom:18px;
+  padding-bottom:16px; border-bottom:1px solid rgba(196,165,116,.2);
+}
+.flavor-info{flex:1; min-width:0}
+.flavor-info h4{font-size:1.35rem; font-weight:600; color:var(--brown); margin-bottom:4px}
+.flavor-desc{font-size:.84rem; color:var(--brown-soft); line-height:1.45; margin-bottom:10px}
+.flavor-badges{display:flex; gap:6px; flex-wrap:wrap}
+.p-ativo{background:var(--cream-deep); color:var(--brown-soft)}
+.flavor-price-tag{
+  font-family:'Cormorant Garamond',serif; font-size:1.5rem; font-weight:700;
+  color:var(--pink-deep); white-space:nowrap;
+  background:linear-gradient(135deg, var(--pink-pale), var(--cream));
+  border:1px solid rgba(196,165,116,.3); border-radius:12px;
+  padding:8px 16px; line-height:1;
+}
+.flavor-controls{
+  display:grid; grid-template-columns:1fr 1fr auto; gap:16px; align-items:end;
+}
+.flavor-field label{display:block; margin:0 0 6px; font-size:.68rem; color:var(--brown-soft)}
+.stock-control.premium{
+  background:var(--cream); border:1.5px solid rgba(44,24,16,.08);
+  border-radius:12px; padding:4px 6px; gap:4px;
+}
+.stock-control.premium .stock-val{
+  min-width:36px; text-align:center; font-weight:700; font-size:1rem;
+  color:var(--brown-mid); font-family:'Cormorant Garamond',serif;
+}
+.flavor-price-input{
+  width:100%; padding:10px 12px; font-size:.92rem;
+  border:1.5px solid rgba(44,24,16,.1); border-radius:12px; background:var(--cream);
+}
+.flavor-actions{display:flex; gap:8px; align-items:center}
+.flavor-actions .ghost-btn{
+  background:var(--cream); color:var(--brown-soft);
+  border:1.5px solid rgba(44,24,16,.12); box-shadow:none;
+}
+.flavor-actions .ghost-btn:hover{background:var(--cream-deep); color:var(--brown)}
 .empty{
   text-align:center; opacity:.5; padding:48px 20px; font-size:.9rem;
   font-family:'Cormorant Garamond',serif; font-size:1.1rem;
@@ -683,4 +757,9 @@ button:focus-visible,.abtn:focus-visible,.btn:focus-visible,.stock-btn:focus-vis
   .card .card-img{width:76px; height:76px; min-width:76px}
   .cartbar{left:12px; right:12px; bottom:12px}
   .tabs button{font-size:.75rem; padding:10px 6px}
+  .flavor-form-grid{grid-template-columns:1fr}
+  .flavor-controls{grid-template-columns:1fr; gap:12px}
+  .flavor-card-top{flex-direction:column}
+  .flavor-price-tag{align-self:flex-start}
+  .flavor-actions{justify-content:flex-end}
 }
