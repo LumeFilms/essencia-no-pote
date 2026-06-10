@@ -8,6 +8,7 @@ export default function Loja() {
   const [flavors, setFlavors] = useState(null);
   const [cart, setCart] = useState({});
   const [etapa, setEtapa] = useState('menu'); // menu | checkout | pix | sucesso
+  const [pagamentoConfirmado, setPagamentoConfirmado] = useState(false);
   const [nome, setNome] = useState('');
   const [fone, setFone] = useState('');
   const [pedido, setPedido] = useState(null);
@@ -41,6 +42,24 @@ export default function Loja() {
   }, []);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [etapa]);
+
+  // Verifica se o admin confirmou o pagamento (atualiza sozinho na tela do cliente).
+  useEffect(() => {
+    if ((etapa !== 'pix' && etapa !== 'sucesso') || !pedido) return;
+    const verificar = async () => {
+      try {
+        const r = await fetch(`/api/orders/${pedido.id}`);
+        const data = await r.json();
+        if (data.order?.status === 'pago') {
+          setPagamentoConfirmado(true);
+          setEtapa('sucesso');
+        }
+      } catch { /* ignora */ }
+    };
+    verificar();
+    const t = setInterval(verificar, 4000);
+    return () => clearInterval(t);
+  }, [etapa, pedido]);
 
   const mudar = (id, d) => {
     const f = flavors.find(f => f.id === id);
@@ -101,6 +120,7 @@ export default function Loja() {
     if (!pedido) return;
     try {
       await fetch(`/api/orders/${pedido.id}/informar-pagamento`, { method: 'POST' });
+      setPagamentoConfirmado(false);
       setEtapa('sucesso');
     } catch {
       alert('Erro ao informar pagamento. Tente novamente.');
@@ -199,6 +219,11 @@ export default function Loja() {
                 <b>2.</b> Escaneie o QR Code ou use o <b>Pix copia e cola</b><br />
                 <b>3.</b> Confirme o pagamento e toque no botão abaixo 👇
               </div>
+              <div className="pix-aviso">
+                <div className="pix-aviso-icon">⏳</div>
+                <p><strong>Aguardando pagamento...</strong></p>
+                <p>Esta página atualiza sozinha quando confirmarmos seu pagamento.</p>
+              </div>
               <button className="btn" onClick={jaPaguei}>Já fiz o pagamento ✓</button>
               <div className="pedido-info">
                 <span className="badge">Pedido #{pedido.id}</span>
@@ -210,11 +235,13 @@ export default function Loja() {
         {etapa === 'sucesso' && pedido && (
           <section>
             <div className="panel done">
-              <div className="big">🎉</div>
-              <h3>Pagamento informado!</h3>
+              <div className="big">{pagamentoConfirmado ? '✅' : '⏳'}</div>
+              <h3>{pagamentoConfirmado ? 'Pagamento confirmado!' : 'Recebemos seu aviso!'}</h3>
               <span className="badge">Pedido #{pedido.id}</span>
               <p style={{ fontSize: '.92rem', color: 'var(--brown-soft)', margin: '8px 0 4px' }}>
-                Vamos conferir o pagamento e preparar seu bolo no pote com muito carinho. 💕
+                {pagamentoConfirmado
+                  ? 'Seu pagamento foi confirmado! Estamos preparando seu bolo no pote com muito carinho. 💕'
+                  : 'Vamos conferir o pagamento. Esta página atualiza sozinha quando for confirmado. 💕'}
               </p>
               <Resumo />
               <button className="btn" onClick={() => window.open('/recibo/' + pedido.id, '_blank')}>Ver recibo 🧾</button>

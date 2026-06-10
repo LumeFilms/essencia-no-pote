@@ -268,8 +268,9 @@ export default function Admin() {
               <div className="item">
                 <h3 style={{ marginBottom: 10 }}>Pagamento</h3>
                 <p className="sub2" style={{ marginBottom: 14 }}>
-                  Escolha como os clientes pagam na loja. O modo <strong>Pix com QR Code</strong> exibe
-                  o QR direto no site; o modo <strong>InfinitePay</strong> redireciona para o checkout externo.
+                  Para venda presencial (sem entrega), use <strong>Pix com QR Code</strong> — o cliente
+                  só vê o QR na loja. O <strong>InfinitePay</strong> pede nome, e-mail, telefone e CEP
+                  como checkout de entrega; use só se precisar de confirmação automática com taxa.
                 </p>
                 <label>Modo de pagamento</label>
                 <select
