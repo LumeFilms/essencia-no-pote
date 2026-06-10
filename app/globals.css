@@ -145,7 +145,8 @@ input:focus{outline:3px solid var(--pink-soft)}
 }
 .pix-aviso-icon{font-size:2rem; margin-bottom:8px}
 .pix-aviso p{margin:4px 0}
-.pedido-info{text-align:center; margin-top:16px}
+.pedido-info{text-align:center; margin-top:16px; margin-bottom:16px}
+.panel .btn.ghost{margin-top:16px; display:block; width:100%}
 
 /* ---------- sucesso ---------- */
 .done{text-align:center}
